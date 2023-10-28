@@ -4,6 +4,7 @@
     "**/node_modules/**",
     "**/specs/**",
     "**/*.specs.js",
-    "assets/**"
+    "assets/**",
+    "src/**"
   ]
 }
