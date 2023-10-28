@@ -1,0 +1,12 @@
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "echo \"no test\""
+  },
+  "dependencies": {
+    "bfast": "^6.0.1",
+    "helia": "^2.0.3"
+  },
+  "private": true
+}
