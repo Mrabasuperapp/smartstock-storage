@@ -6,5 +6,8 @@ import {unixfs} from "@helia/unixfs";
 
 const blockstore = new FsBlockstore(join(homedir(), 'zebra-store'));
 
-const helia = await createHelia({blockstore})
+const helia = await createHelia({blockstore});
+
+helia.start().then(console.log).catch(console.log);
+
 export const unixFS = unixfs(helia);
