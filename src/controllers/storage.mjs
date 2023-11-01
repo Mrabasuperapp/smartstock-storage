@@ -15,6 +15,7 @@ export function multipartForm() {
             // if (contentType !== 'multipart/form-data'.trim().toLowerCase()) {
             //     response.status(StatusCodes.BAD_REQUEST).json({message: 'Accept only multipart request'});
             //     return;
+
             // }
             try {
                 devLog('START HANDLING MULTI PART');
