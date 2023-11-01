@@ -12,10 +12,10 @@ export function multipartForm() {
         (request, response) => {
             const contentType = `${request.get('content-type')}`.split(';')[0].toString().trim().toLowerCase();
             devLog(contentType)
-            if (contentType !== 'multipart/form-data'.trim().toLowerCase()) {
-                response.status(StatusCodes.BAD_REQUEST).json({message: 'Accept only multipart request'});
-                return;
-            }
+            // if (contentType !== 'multipart/form-data'.trim().toLowerCase()) {
+            //     response.status(StatusCodes.BAD_REQUEST).json({message: 'Accept only multipart request'});
+            //     return;
+            // }
             try {
                 devLog('START HANDLING MULTI PART');
                 const max = 50
