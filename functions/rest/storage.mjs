@@ -6,6 +6,12 @@ export const uploadMultipart = {
     onRequest: multipartForm()
 }
 
+export const uploadMultipartV2 = {
+    path: `/shop/:pid/:aid/storage`,
+    method: 'POST',
+    onRequest: multipartForm()
+}
+
 export const getFileREST = {
     path: `/storage/:cid/:filename`,
     method: 'GET',
