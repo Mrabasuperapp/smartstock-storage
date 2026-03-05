@@ -1,0 +1,30 @@
+{
+  "rootCid": "bafyreiehve2kpwektezct5bfyjotxz73bc3zuvm3alspitmvpssp43mzou",
+  "updatedAt": "2026-03-05T21:46:28.457Z",
+  "files": [
+    {
+      "cid": "bafybeibl6xou4oocu2xyn44d3ldav3dg6kdgoqvxmvx7hodsfwvfjl7c2a",
+      "name": "PXL_20251226_083018074.TS.mp4",
+      "size": 22303840,
+      "type": "video/mp4",
+      "createdAt": "2026-03-05T21:46:28.457Z",
+      "url": "/storage/bafybeibl6xou4oocu2xyn44d3ldav3dg6kdgoqvxmvx7hodsfwvfjl7c2a/PXL_20251226_083018074.TS.mp4"
+    },
+    {
+      "cid": "bafkreigdu6nenhtb7wfjrifmpe4nkh6wf6i3jipnhviuc4nmpmbnvre7pe",
+      "name": "Scream VI-English.srt",
+      "size": 131850,
+      "type": "application/x-subrip",
+      "createdAt": "2026-03-05T21:46:16.744Z",
+      "url": "/storage/bafkreigdu6nenhtb7wfjrifmpe4nkh6wf6i3jipnhviuc4nmpmbnvre7pe/Scream%20VI-English.srt"
+    },
+    {
+      "cid": "bafkreiehmvxddil4pdxnowu7rg2mpj3dyjp72b36rkfalmwhyab7qib3u4",
+      "name": "final-exam.pdf",
+      "size": 312514,
+      "type": "application/pdf",
+      "createdAt": "2026-03-05T21:46:03.228Z",
+      "url": "/storage/bafkreiehmvxddil4pdxnowu7rg2mpj3dyjp72b36rkfalmwhyab7qib3u4/final-exam.pdf"
+    }
+  ]
+}

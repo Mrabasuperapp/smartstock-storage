@@ -1,6 +1,7 @@
 import {devLog} from "../utils/debug.mjs";
 import itToStream from 'it-to-stream';
-import {unixFS} from "./ipfs_helia.mjs";
+import {blockstore, unixFS} from "./ipfs_helia.mjs";
+import {CID} from "multiformats/cid";
 
 
 /**
@@ -49,21 +50,70 @@ export async function generateDataFromCid(
     if (ipfsOptions?.stream === true) {
         return itToStream.readable(results);
     } else {
-        let buffer = Buffer.alloc(0);
+        const chunks = [];
+        let total = 0;
         for await (const chunk of results) {
-            buffer = Buffer.concat([buffer, chunk]);
+            chunks.push(chunk);
+            total += chunk?.length ?? 0;
         }
-        return buffer;
+        return Buffer.concat(chunks, total);
     }
 }
 
 /**
  *
  * @param cid {string}
- * @return {Promise<boolean>}
+ * @return {Promise<{deleted: boolean, reason?: string}>}
  */
-export async function checkIfWeHaveCidInWeb3(
-    cid,
-) {
-    return true;
+export async function deleteDataFromCid(cid) {
+    if (!cid) {
+        return {deleted: false, reason: "missing cid"};
+    }
+    const parsed = CID.parse(`${cid}`);
+    const exists = await blockstore.has(parsed);
+    if (!exists) {
+        return {deleted: false, reason: "cid-not-found"};
+    }
+    await blockstore.delete(parsed);
+    return {deleted: true};
+}
+
+/**
+ *
+ * @param options {{limit?: number, offset?: number, includeSize?: boolean, cidQuery?: string}}
+ * @return {Promise<{entries: Array<{cid: string, size?: number}>, total: number, truncated: boolean, limit: number, offset: number}>}
+ */
+export async function listDatastoreEntries(options = {}) {
+    const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Number(options.limit)) : 500;
+    const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
+    const includeSize = options.includeSize === true;
+    const cidQuery = `${options.cidQuery ?? ""}`.trim().toLowerCase();
+    const entries = [];
+    let total = 0; // total matched
+    let seenMatched = 0;
+    let truncated = false;
+    for await (const pair of blockstore.getAll()) {
+        const cidStr = pair.cid.toString();
+        if (cidQuery && !cidStr.toLowerCase().includes(cidQuery)) {
+            continue;
+        }
+        total += 1;
+        if (seenMatched++ < offset) {
+            continue;
+        }
+        if (entries.length >= limit) {
+            truncated = true;
+            continue;
+        }
+        const item = {cid: cidStr};
+        if (includeSize) {
+            let size = 0;
+            for await (const chunk of pair.bytes) {
+                size += chunk?.length ?? 0;
+            }
+            item.size = size;
+        }
+        entries.push(item);
+    }
+    return {entries, total, truncated, limit, offset};
 }

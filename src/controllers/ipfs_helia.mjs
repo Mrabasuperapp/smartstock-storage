@@ -8,9 +8,25 @@ const blockstore = new FsBlockstore(join(homedir(), 'zebra-store'));
 
 const helia = await createHelia({blockstore});
 
-//<<<<<<< HEAD
-//=======
-// helia.start().then(console.log).catch(console.log);
+let closed = false;
+async function shutdown() {
+    if (closed) {
+        return;
+    }
+    closed = true;
+    try {
+        await helia.stop();
+    } catch (_) {
+    }
+    try {
+        await blockstore.close();
+    } catch (_) {
+    }
+}
 
-//>>>>>>> c163b4e (ignore helia start)
+process.once("SIGINT", () => void shutdown());
+process.once("SIGTERM", () => void shutdown());
+process.once("beforeExit", () => void shutdown());
+
 export const unixFS = unixfs(helia);
+export {blockstore, helia};
