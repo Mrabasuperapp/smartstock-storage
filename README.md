@@ -23,7 +23,7 @@ Everything except the file routes lives under `/storage/...`. The older `POST /s
 
 ```bash
 npm install
-cp .env.example .env   # then set AUTH_USERS_JSON, see below
+cp .env.example .env   # then set ADMIN_EMAILS to your Google email
 npm run dev            # http://localhost:3003
 ```
 
@@ -33,7 +33,10 @@ Set these as environment variables on the service (or in `.env` for local runs).
 
 | Variable | Required | Default | Notes |
 |---|---|---|---|
-| `AUTH_USERS_JSON` | **yes** | – | JSON array of users who can sign in. Needs an admin (see below). |
+| `ADMIN_EMAILS` | **yes** | – | Comma-separated Google emails of the owners. They sign in to the console and can add other admins. |
+| `FIREBASE_WEB_CONFIG` | no | shared `bfastapp` project | JSON with `projectId`, `apiKey`, `authDomain`, `appId` to use your own Firebase project. |
+| `AUTH_SESSION_TTL_SEC` | no | `43200` (12 h) | How long a console sign-in lasts. |
+| `AUTH_USERS_JSON` | no | – | Service accounts that exchange a username and password for a token at `/storage/auth/token`. Prefer console-minted tokens. |
 | `STORAGE_BLOCKSTORE_DIR` | recommended | `~/zebra-store` | The one folder that holds blocks **and** state (`_meta/`). Point it at persistent storage. |
 | `NODE_ENV` | recommended | – | `production` on servers. |
 | `AUTH_COOKIE_SECURE` | recommended | `auto` | `true` when served over HTTPS. |
@@ -42,14 +45,19 @@ Set these as environment variables on the service (or in `.env` for local runs).
 | `STORAGE_NAMESPACE` | no | `smartstock-storage` | Namespace of the index log. |
 | `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_KEY_ID`, `AUTH_TOKEN_TTL_SEC` | no | see `.env.example` | Session token settings. |
 
-`AUTH_USERS_JSON` example (generate the hash with `printf %s 'your-password' | shasum -a 256`):
+### Signing in
 
-```json
-[{"username":"admin","passwordHash":"<sha256>","roles":["admin"],
-  "scopes":["storage:read","storage:write","admin:dashboard","admin:files","admin:datastore"]}]
-```
+The console uses **Google sign-in** (Firebase Authentication, the same `bfastapp` project as the bfast cloud console).
 
-The hash in `.env.example` belongs to a public example password. Replace it on any real server.
+1. In the Firebase console, open project `bfastapp` > Authentication > Settings > **Authorized domains** and add the domain
+   you serve Zebra from (for example `zebra.example.com`). `localhost` is allowed by default. Without this, the Google
+   popup fails with `auth/unauthorized-domain` and nobody can sign in.
+2. Set `ADMIN_EMAILS` on the service to the owners' Google emails.
+3. Open `/storage/auth/login` and choose **Continue with Google**. Only verified Google accounts on the list are let in.
+4. In the console, **Team** adds and removes other Google accounts. Removing someone ends their session at once.
+   Owners from `ADMIN_EMAILS` can only be changed on the server.
+
+Admins added in the console are stored in `_meta/admins.json`.
 
 ### The data folder
 
@@ -61,6 +69,7 @@ The hash in `.env.example` belongs to a public example password. Replace it on a
     helia-storage-root.snapshot.json
     keys/                    signing keypair for tokens
     tokens.json              registry of write tokens (for revocation)
+    admins.json              admins added in the console
 ```
 
 Back up or move the whole folder. If `_meta` is lost, **Rebuild index from store** in the console finds the newest index
@@ -91,7 +100,7 @@ entry again. If `_meta/keys` is lost, every issued token stops working.
      --label-add bfast.managed=true \
      --env-add STORAGE_BLOCKSTORE_DIR=/data/zebra-store \
      --env-add NODE_ENV=production --env-add AUTH_COOKIE_SECURE=true \
-     --env-add 'AUTH_USERS_JSON=[...]' \
+     --env-add ADMIN_EMAILS=you@gmail.com \
      --replicas 1 \
      zebra_faas
    ```
@@ -114,7 +123,7 @@ entry again. If `_meta/keys` is lost, every issued token stops working.
 
 ```bash
 git clone <this repo> && cd smartstock-storage && npm ci --omit=dev
-export STORAGE_BLOCKSTORE_DIR=/var/lib/zebra-store AUTH_USERS_JSON='[...]' NODE_ENV=production
+export STORAGE_BLOCKSTORE_DIR=/var/lib/zebra-store ADMIN_EMAILS=you@gmail.com NODE_ENV=production
 pm2 start "npx bfast fs serve -p 3003" --name zebra --update-env
 ```
 
@@ -127,7 +136,7 @@ pointing at the copy, and run **Verify all files** in the console. Never run two
 
 ## Tokens: how clients write (and read)
 
-1. Sign in at `/storage/auth/login`, open **Access**, and mint a token per service (write only, or read + write).
+1. Sign in with Google at `/storage/auth/login`, open **Access**, and mint a token per service (write only, or read + write).
    Tokens never expire; revoke them in the same screen.
 2. Clients send `Authorization: Bearer <token>`:
 
@@ -152,11 +161,13 @@ pointing at the copy, and run **Verify all files** in the console. Never run two
 | `/functions-all` shows 0 functions, every route is 404 | `bfast.json` ignores a path that matches the engine's own folders. Keep its `ignore` list to `node_modules` and specs. |
 | `service update paused` | The new task failed. Read `docker service ps zebra_faas --no-trunc` and `docker service logs`, fix, then `docker service update --force zebra_faas`. |
 | 502 or 504 from the domain | The Traefik service port label and `PORT` must match (3000). |
-| "No AUTH_USERS_JSON users configured" | `AUTH_USERS_JSON` is missing on the service. |
+| Google popup fails with `auth/unauthorized-domain` | Add the domain under Firebase Authentication > Settings > Authorized domains. |
+| "… does not have access" after signing in | The Google account is not in `ADMIN_EMAILS` or the Team list. An owner adds it in **Team**. |
+| Nobody can get in (no owner set) | `ADMIN_EMAILS` is missing on the service. Set it and redeploy. |
 | Files listed but "missing" in Verify | The index points at blocks that are not in the folder (partial copy). Restore the blocks or remove the entries. |
 
 ## Security notes
 
 - Keep `_meta/keys` private and backed up. Rotating it (delete the folder, restart) invalidates all issued tokens.
 - Do not commit real keys or passwords. Set secrets as service environment variables.
-- Rotate the example admin password hash before exposing the console.
+- Console access is by Google account only. Keep `ADMIN_EMAILS` to people you trust, since every admin has full access.
