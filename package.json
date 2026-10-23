@@ -2,7 +2,7 @@
   "name": "functions",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bfast fs serve",
+    "dev": "bfast fs serve -p 3003",
     "test": "echo \"no test\""
   },
   "dependencies": {
@@ -15,7 +15,10 @@
     "jsonschema": "~1.5.0",
     "mime": "~4.1.0",
     "uuid": "~10.0.0",
-    "dotenv": "~17.3.1"
+    "dotenv": "~17.3.1",
+    "@ipld/dag-cbor": "~9.2.5",
+    "@ipld/dag-json": "~10.2.6",
+    "multiformats": "~13.4.2"
   },
   "private": true
 }

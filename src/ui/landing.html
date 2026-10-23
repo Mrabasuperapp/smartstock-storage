@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en" class="no-js"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light dark"/><title>Zebra Storage</title>
+<meta name="description" content="Content-addressed file storage with a self-describing index."/>
+<link rel="stylesheet" href="/ui/console.css"/>
+<script>document.documentElement.classList.replace("no-js","js")</script></head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="#top"><span class="mark"></span>Zebra</a>
+  <div class="links"><a href="#how">How it works</a><a href="#api">API</a><a href="#why">Why</a></div>
+  <a class="btn sm primary" href="/auth/login">Sign in</a>
+</div><i class="progress"></i></nav>
+
+<header class="hero" id="top" data-scrub><div class="stripes"></div>
+  <div class="wrap inner">
+    <span class="eyebrow fade">Content-addressed storage</span>
+    <h1 aria-label="Store once. Address forever.">
+      <span class="mask" style="--i:0"><span>Store once.</span></span>
+      <span class="mask" style="--i:1"><span>Address</span></span>
+      <span class="mask" style="--i:2"><span>forever.</span></span>
+    </h1>
+    <p class="lede fade" style="--i:4">Zebra keeps every file as content-addressed blocks and writes its own index into the same store. Copy the folder to a new server and everything, names included, comes with it.</p>
+    <div class="chips fade" style="--i:5"><a class="btn primary" href="/auth/login">Open console</a><a class="btn" href="#api">Read the API</a></div>
+  </div>
+  <i class="scrollcue"></i>
+</header>
+
+<section class="sec" id="how"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">01 — How it works</span>
+    <h2><span class="mask" style="--i:0"><span>Three steps,</span></span><span class="mask" style="--i:1"><span>one folder.</span></span></h2>
+  </header>
+  <div class="story" id="story">
+    <div class="steps"><div class="rail"><i></i></div>
+      <article class="step on" data-step="0"><span class="eyebrow">Upload</span><h3>Send a file with a token</h3><p>Services authenticate with a signed Bearer token and post the file.</p></article>
+      <article class="step" data-step="1"><span class="eyebrow">Address</span><h3>Get a permanent CID</h3><p>The file is chunked into blocks and addressed by its content. The same bytes always give the same address.</p></article>
+      <article class="step" data-step="2"><span class="eyebrow">Describe</span><h3>The index writes itself</h3><p>Name, type and size are appended to a namespaced DAG log stored beside the blocks.</p></article>
+    </div>
+    <div class="stage" id="stage" data-active="0">
+      <div class="panel" data-p="0"><span class="eyebrow">Request</span>
+        <code class="code">POST /storage
+Authorization: Bearer &lt;token&gt;
+Content-Type: multipart/form-data
+
+multipleFiles=@invoice.pdf</code></div>
+      <div class="panel" data-p="1"><span class="eyebrow">Response</span>
+        <code class="code">{
+  "urls": [
+    "/storage/bafkrei…q7oie/invoice.pdf"
+  ]
+}</code><p class="muted" style="margin:0">Same file in, same CID out.</p></div>
+      <div class="panel" data-p="2"><span class="eyebrow">Index entry</span>
+        <code class="code">{
+  "namespace": "smartstock-storage",
+  "op": "add",
+  "prev": { "/": "baguqee…" },
+  "file": {
+    "name": "invoice.pdf",
+    "type": "application/pdf",
+    "content": { "/": "bafkrei…" }
+  }
+}</code></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="sec" id="api"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">02 — API</span>
+    <h2><span class="mask" style="--i:0"><span>Small surface.</span></span><span class="mask" style="--i:1"><span>Easy to call.</span></span></h2>
+  </header>
+  <div class="two">
+    <div class="card fade" style="--i:2"><span class="eyebrow">Upload</span><code class="code" style="margin-top:12px">curl -X POST $HOST/storage \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "multipleFiles=@file.png"</code></div>
+    <div class="card fade" style="--i:3"><span class="eyebrow">Download</span><code class="code" style="margin-top:12px">curl $HOST/storage/$CID/file.png \
+  -H "Authorization: Bearer $TOKEN" \
+  -o file.png</code></div>
+  </div>
+  <p class="muted fade" style="--i:4;margin-top:20px">Tokens are minted by an admin in the console, scoped to write or read + write, and stay valid until an admin revokes them.</p>
+</div></section>
+
+<section class="sec" id="why"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">03 — Why Zebra</span>
+    <h2><span class="mask" style="--i:0"><span>Built to be</span></span><span class="mask" style="--i:1"><span>moved and trusted.</span></span></h2>
+  </header>
+  <div class="two" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+    <div class="card fade" style="--i:1"><h3 style="font-size:1.3rem">Self-describing</h3><p class="muted">Names and types live in the store, not in a side database.</p></div>
+    <div class="card fade" style="--i:2"><h3 style="font-size:1.3rem">Portable</h3><p class="muted">One folder holds blocks, index and keys. Pin it to a server or move it.</p></div>
+    <div class="card fade" style="--i:3"><h3 style="font-size:1.3rem">Verifiable</h3><p class="muted">Check every file's blocks, or rebuild the index straight from the store.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap"><span>Zebra Storage</span><a href="/auth/login">Sign in →</a></div></footer>
+<script src="/ui/landing.js" defer></script>
+</body></html>

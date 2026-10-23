@@ -1,3 +1,5 @@
+import {consolePage, landingPage, uiCss, uiJs, uiLandingJs} from "../../src/controllers/ui.mjs";
+import {storeLog, storeRebuildIndex, storeStats, storeVerify} from "../../src/controllers/store_admin.mjs";
 import {
     adminDashboard,
     adminDeleteFile,
@@ -12,6 +14,9 @@ import {
     authCreateSession,
     authDestroySession,
     authIssueToken,
+    authIssueWriteToken,
+    authListTokens,
+    authRevokeToken,
     authLoginPage,
     authPublicKey,
     authWhoAmI,
@@ -98,8 +103,8 @@ export const authPublicKeyREST = {
     onRequest: authPublicKey()
 }
 
-export const adminDashboardREST = {
-    path: `/admin/storage`,
+export const adminDashboardLegacyREST = {
+    path: `/admin/storage/legacy`,
     method: 'GET',
     onRequest: adminDashboard()
 }
@@ -126,4 +131,82 @@ export const adminListHeliaDatastoreREST = {
     path: `/admin/storage/helia/datastore`,
     method: 'GET',
     onRequest: adminListHeliaDatastore()
+}
+
+export const consoleREST = {
+    path: `/admin/storage`,
+    method: 'GET',
+    onRequest: consolePage()
+}
+
+export const consoleStoreREST = {
+    path: `/admin/store`,
+    method: 'GET',
+    onRequest: consolePage()
+}
+
+export const uiCssREST = {
+    path: `/ui/console.css`,
+    method: 'GET',
+    onRequest: uiCss()
+}
+
+export const uiJsREST = {
+    path: `/ui/console.js`,
+    method: 'GET',
+    onRequest: uiJs()
+}
+
+export const adminWriteTokenREST = {
+    path: `/admin/tokens`,
+    method: 'POST',
+    onRequest: authIssueWriteToken()
+}
+
+export const storeStatsREST = {
+    path: `/admin/store/stats`,
+    method: 'GET',
+    onRequest: storeStats()
+}
+
+export const storeLogREST = {
+    path: `/admin/store/log`,
+    method: 'GET',
+    onRequest: storeLog()
+}
+
+export const storeVerifyREST = {
+    path: `/admin/store/verify`,
+    method: 'POST',
+    onRequest: storeVerify()
+}
+
+export const storeRebuildIndexREST = {
+    path: `/admin/store/rebuild`,
+    method: 'POST',
+    onRequest: storeRebuildIndex()
+}
+
+export const rootREST = {
+    path: `/`,
+    method: 'GET',
+    onRequest: landingPage()
+}
+
+export const uiLandingJsREST = {
+    path: `/ui/landing.js`,
+    method: 'GET',
+    onRequest: uiLandingJs()
+}
+
+export const adminListTokensREST = {
+    path: `/admin/tokens`,
+    method: 'GET',
+    onRequest: authListTokens()
+}
+
+export const adminRevokeTokenREST = {
+    path: `/admin/tokens/:id`,
+    method: 'DELETE',
+    onRequest: authRevokeToken()
 }

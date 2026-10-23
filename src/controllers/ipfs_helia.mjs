@@ -1,10 +1,9 @@
 import {createHelia} from 'helia'
 import {FsBlockstore} from "blockstore-fs";
-import {homedir} from "node:os";
-import {join} from 'node:path';
+import {blockstoreDir} from "../utils/paths.mjs";
 import {unixfs} from "@helia/unixfs";
 
-const blockstore = new FsBlockstore(join(homedir(), 'zebra-store'));
+const blockstore = new FsBlockstore(blockstoreDir);
 
 const helia = await createHelia({blockstore});
 

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light dark"/>
+<title>Zebra Console</title>
+<link rel="stylesheet" href="/ui/console.css"/>
+<script>document.documentElement.classList.replace("no-js","js")</script>
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="#top"><span class="mark"></span>Zebra</a>
+  <div class="links"><a href="#store">Store</a><a href="#files">Files</a><a href="#access">Access</a><a href="#integrity">Integrity</a></div>
+  <button class="btn sm" id="out">Sign out</button>
+</div><i class="progress"></i></nav>
+
+<header class="hero" id="top" data-scrub><div class="stripes"></div>
+  <div class="wrap inner">
+    <span class="eyebrow fade">Content-addressed storage</span>
+    <h1 aria-label="Files that describe themselves.">
+      <span class="mask" style="--i:0"><span>Files that</span></span>
+      <span class="mask" style="--i:1"><span>describe</span></span>
+      <span class="mask" style="--i:2"><span>themselves.</span></span>
+    </h1>
+    <p class="lede fade" style="--i:4">Every upload is stored as blocks and logged in a signed, namespaced DAG that lives inside the store itself. Move the folder, keep the truth.</p>
+    <div class="chips fade" style="--i:5" id="chips"></div>
+  </div>
+  <i class="scrollcue"></i>
+</header>
+
+<section class="sec" id="store"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">01 — Store</span>
+    <h2><span class="mask" style="--i:0"><span>Scroll through</span></span><span class="mask" style="--i:1"><span>the store.</span></span></h2>
+  </header>
+  <div class="story" id="story">
+    <div class="steps"><div class="rail"><i></i></div>
+      <article class="step on" data-step="0"><span class="eyebrow">Blocks</span><h3>What is on disk</h3><p>Every file is chunked into content-addressed blocks. Same bytes, same address, stored once.</p></article>
+      <article class="step" data-step="1"><span class="eyebrow">Index log</span><h3>An append-only history</h3><p>Uploads and deletes are appended as dag-json entries, each linking to the one before it.</p></article>
+      <article class="step" data-step="2"><span class="eyebrow">Namespace</span><h3>One folder, whole truth</h3><p>The head of the log and the keys sit beside the blocks. Pin this folder to a server and you have pinned everything.</p></article>
+    </div>
+    <div class="stage" id="stage" data-active="0">
+      <div class="panel" data-p="0">
+        <span class="eyebrow">Blocks on disk</span>
+        <div class="big num" id="k-blocks">0</div>
+        <div class="kpis">
+          <div class="kpi"><b class="num" id="k-bytes">–</b><span>Block data</span></div>
+          <div class="kpi"><b class="num" id="k-files">–</b><span>Indexed files</span></div>
+          <div class="kpi"><b class="num" id="k-free">–</b><span>Disk free</span></div>
+        </div>
+        <div class="legend" id="legend"></div><div class="bar" id="bar"></div>
+      </div>
+      <div class="panel" data-p="1"><span class="eyebrow">Latest entries</span><ul class="timeline" id="timeline"></ul></div>
+      <div class="panel" data-p="2"><span class="eyebrow">Namespace</span>
+        <dl class="kv" id="kv"></dl></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="sec" id="files"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">02 — Files</span>
+    <h2><span class="mask" style="--i:0"><span>Drop it in.</span></span><span class="mask" style="--i:1"><span>Get an address.</span></span></h2>
+  </header>
+  <label class="drop fade" id="drop" style="--i:2"><input type="file" id="pick" multiple/>
+    <b>Drop files or click to upload</b><span class="muted" id="dropmsg">Up to 50 MB each</span></label>
+  <div class="toolbar"><input class="field" id="q" placeholder="Search by name or CID"/><select class="field" id="type" style="flex:none;min-width:130px"><option value="all">All types</option><option value="image">Images</option><option value="video">Video</option><option value="application">Documents</option><option value="text">Text</option></select></div>
+  <div class="list" id="list"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;min-height:38px"><span class="muted num" id="count"></span><button class="btn sm" id="more" hidden>Load more</button></div>
+</div></section>
+
+<section class="sec" id="access"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">03 — Access</span>
+    <h2><span class="mask" style="--i:0"><span>Mint a token</span></span><span class="mask" style="--i:1"><span>to write files.</span></span></h2>
+    <p class="lede fade" style="--i:3">Services send this token as a Bearer header to upload. It is signed with the server key, scoped, and stays valid until you revoke it.</p>
+  </header>
+  <div class="two">
+    <form class="card form fade" id="tokform" style="--i:2">
+      <label>Label<input class="field" id="tlabel" value="uploader" maxlength="40" required/></label>
+      <label>Access<div class="seg" id="tacc"><button type="button" class="btn on" data-v="write">Write only</button><button type="button" class="btn" data-v="read-write">Read + write</button></div></label>
+      <p class="muted" style="margin:0;font-size:13px">Tokens never expire. They work until you revoke them below.</p>
+      <button class="btn primary" type="submit">Generate token</button>
+    </form>
+    <div class="card token fade" id="tokout" style="--i:3"><span class="muted">Your token appears here. It is shown once.</span></div>
+  </div>
+  <h3 style="font-size:1.2rem;margin:40px 0 12px">Tokens</h3>
+  <div class="list" id="toklist"></div>
+</div></section>
+
+<section class="sec" id="integrity"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">04 — Integrity</span>
+    <h2><span class="mask" style="--i:0"><span>Trust, then</span></span><span class="mask" style="--i:1"><span>verify.</span></span></h2>
+  </header>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;min-height:38px">
+    <button class="btn primary" id="verify">Verify all files</button>
+    <button class="btn" id="rebuild">Rebuild index from store</button>
+    <span id="vmsg" class="muted"></span>
+  </div>
+  <div class="issues" id="issues"></div>
+</div></section>
+
+<footer><div class="wrap">Zebra — namespace <span class="mono" id="ns">–</span></div></footer>
+<div class="toast" id="toast" role="status"></div>
+<script src="/ui/console.js" defer></script>
+</body></html>

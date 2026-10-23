@@ -2,11 +2,14 @@ import {createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign
 import {mkdir, readFile, stat, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {StatusCodes} from "http-status-codes";
+import {metaDir} from "../utils/paths.mjs";
+import {loginPageHtml} from "./ui.mjs";
+import {checkApiToken, listApiTokens, registerApiToken, revokeApiToken} from "./tokens.mjs";
 
 const issuer = process.env.AUTH_ISSUER || "smartstock-storage";
 const audience = process.env.AUTH_AUDIENCE || "smartstock-storage-api";
 const tokenTtlSec = Number(process.env.AUTH_TOKEN_TTL_SEC || 60 * 60);
-const keyDir = process.env.AUTH_KEY_DIR || join(process.cwd(), ".data", "keys");
+const keyDir = process.env.AUTH_KEY_DIR || join(metaDir, "keys");
 const privateKeyPath = process.env.AUTH_PRIVATE_KEY_PATH || join(keyDir, "auth-private.pem");
 const publicKeyPath = process.env.AUTH_PUBLIC_KEY_PATH || join(keyDir, "auth-public.pem");
 const keyId = process.env.AUTH_KEY_ID || "storage-rs256-v1";
@@ -201,7 +204,7 @@ function buildJwt(payload) {
         aud: payload?.aud || audience,
         iat: now,
         nbf: now,
-        exp: now + tokenTtlSec,
+        ...(payload?.jti ? {typ: "api", jti: payload.jti} : {exp: now + tokenTtlSec}),
         sub: payload.sub,
         roles: payload.roles || [],
         scopes: payload.scopes || []
@@ -228,7 +231,8 @@ function validateClaims(claims, expectedAudience) {
     if (Number(claims?.nbf || 0) > now) {
         throw new Error("token-not-active");
     }
-    if (Number(claims?.exp || 0) <= now) {
+    const isApiToken = claims?.typ === "api" && !!claims?.jti;
+    if (!isApiToken && Number(claims?.exp || 0) <= now) {
         throw new Error("token-expired");
     }
 }
@@ -297,6 +301,11 @@ export function authorize({roles = [], scopes = [], audience: expectedAudience} 
                 return;
             }
 
+            if (claims?.typ === "api" && !await checkApiToken(`${claims.jti}`)) {
+                unauthorizedResponse(request, response, "Token revoked");
+                return;
+            }
+
             request.auth = {
                 sub: `${claims.sub}`,
                 roles: claimRoles,
@@ -309,6 +318,76 @@ export function authorize({roles = [], scopes = [], audience: expectedAudience} 
         }
     };
 }
+
+const flag = (name, fallback) => {
+    const raw = `${process.env[name] ?? ""}`.trim().toLowerCase();
+    return raw ? ["1", "true", "yes", "on"].includes(raw) : fallback;
+};
+
+/** Compatibility switches so servers that do not send tokens yet keep working while they are migrated. */
+export const accessPolicy = () => ({
+    requireWriteToken: flag("STORAGE_REQUIRE_WRITE_TOKEN", false),
+    publicRead: flag("STORAGE_PUBLIC_READ", true)
+});
+
+const untokened = {writes: 0, lastAt: undefined, lastReason: undefined};
+export const getUntokenedWriteStats = () => ({...untokened});
+
+async function tokenIsValid(request) {
+    const token = extractTokenFromRequest(request);
+    if (!token) {
+        return {ok: false, reason: "no-token"};
+    }
+    try {
+        await ensureKeyPairLoaded();
+        const claims = verifyJwt(token);
+        if (claims?.typ === "api" && !await checkApiToken(`${claims.jti}`)) {
+            return {ok: false, reason: "token-revoked"};
+        }
+        return {ok: true};
+    } catch (e) {
+        return {ok: false, reason: `${e?.message || "invalid-token"}`};
+    }
+}
+
+/**
+ * Like authorize(), but when `isRequired()` is false a missing or invalid token is let through.
+ * Valid tokens are always checked for role and scope. With `logWrites` each unauthenticated request is logged.
+ */
+export function authorizeUnlessOptional({roles = [], scopes = [], isRequired, logWrites = false} = {}) {
+    const strict = authorize({roles, scopes});
+    return async (request, response, next) => {
+        if (isRequired()) {
+            return strict(request, response, next);
+        }
+        const check = await tokenIsValid(request);
+        if (check.ok) {
+            return strict(request, response, next);
+        }
+        if (logWrites) {
+            untokened.writes++;
+            untokened.lastAt = new Date().toISOString();
+            untokened.lastReason = check.reason;
+            const ip = request.headers?.["x-forwarded-for"] ?? request.socket?.remoteAddress ?? "-";
+            console.warn(`[zebra:untokened-write] reason=${check.reason} ${request.method} ${request.originalUrl ?? request.url} ip=${ip} ua=${JSON.stringify(request.headers?.["user-agent"] ?? "-")} origin=${request.headers?.origin ?? request.headers?.referer ?? "-"}`);
+        }
+        request.auth = {sub: "anonymous", roles: [], scopes: [], anonymous: true};
+        next?.();
+    };
+}
+
+export const authorizeWrite = () => authorizeUnlessOptional({
+    roles: ["admin", "uploader", "service"],
+    scopes: ["storage:write"],
+    isRequired: () => accessPolicy().requireWriteToken,
+    logWrites: true
+});
+
+export const authorizeRead = () => authorizeUnlessOptional({
+    roles: ["admin", "reader", "uploader", "service"],
+    scopes: ["storage:read"],
+    isRequired: () => !accessPolicy().publicRead
+});
 
 function makeSessionCookie(token) {
     const maxAge = Math.max(60, tokenTtlSec);
@@ -335,55 +414,7 @@ export function authLoginPage() {
     return [
         (_, response) => {
             response.writeHead(200, {'content-type': 'text/html; charset=utf-8'});
-            response.end(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Storage Login</title>
-  <style>
-    body{font-family:Segoe UI,Arial,sans-serif;background:#f3f5f8;display:grid;place-items:center;min-height:100vh;margin:0}
-    .card{background:#fff;border:1px solid #d6dde8;border-radius:12px;padding:20px;width:min(420px,92vw);box-shadow:0 10px 30px rgba(17,24,39,.08)}
-    h1{margin:0 0 14px;font-size:1.2rem}
-    label{display:block;font-size:.88rem;color:#4b5563;margin:8px 0 4px}
-    input{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
-    button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:8px;background:#0b6ef3;color:#fff;font-weight:600;cursor:pointer}
-    .error{color:#b42318;min-height:20px;font-size:.86rem;margin-top:10px}
-  </style>
-</head>
-<body>
-  <form class="card" id="loginForm">
-    <h1>Storage Admin Login</h1>
-    <label for="username">Username</label>
-    <input id="username" name="username" autocomplete="username" required />
-    <label for="password">Password</label>
-    <input id="password" type="password" name="password" autocomplete="current-password" required />
-    <button type="submit">Sign In</button>
-    <div class="error" id="error"></div>
-  </form>
-  <script>
-    const form = document.getElementById("loginForm");
-    const errorEl = document.getElementById("error");
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorEl.textContent = "";
-      const username = form.username.value;
-      const password = form.password.value;
-      const res = await fetch("/auth/session", {
-        method: "POST",
-        headers: {"content-type": "application/json"},
-        body: JSON.stringify({username, password})
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        errorEl.textContent = data.message || "Login failed";
-        return;
-      }
-      window.location.href = "/admin/storage";
-    });
-  </script>
-</body>
-</html>`);
+            response.end(loginPageHtml());
         }
     ];
 }
@@ -451,6 +482,45 @@ export function authCreateSession() {
             }
         }
     ];
+}
+
+const adminOnly = () => authorize({roles: ["admin"], scopes: ["admin:dashboard"]});
+
+/** Mints a write token that never expires; it works until an admin revokes it. */
+export function authIssueWriteToken() {
+    return [
+        adminOnly(),
+        async (request, response) => {
+            try {
+                const body = await parseJsonBody(request);
+                const label = `${body?.label || "uploader"}`.trim().replace(/[^\w .-]/g, "").slice(0, 40) || "uploader";
+                const scopes = body?.access === "read-write" ? ["storage:read", "storage:write"] : ["storage:write"];
+                const record = await registerApiToken({label, scopes, createdBy: request.auth?.sub});
+                const token = buildJwt({sub: `token:${label}`, roles: ["uploader"], scopes, jti: record.id});
+                response.status(StatusCodes.OK).json({tokenType: "Bearer", accessToken: token, token: record});
+            } catch (e) {
+                response.status(StatusCodes.BAD_REQUEST).json({message: e?.toString()});
+            }
+        }
+    ];
+}
+
+export function authListTokens() {
+    return [adminOnly(), async (_, response) => {
+        response.set({"Cache-Control": "no-store"});
+        response.status(StatusCodes.OK).json(await listApiTokens());
+    }];
+}
+
+export function authRevokeToken() {
+    return [adminOnly(), async (request, response) => {
+        const record = await revokeApiToken(`${request.params?.id ?? ""}`);
+        if (!record) {
+            response.status(StatusCodes.NOT_FOUND).json({message: "Token not found"});
+            return;
+        }
+        response.status(StatusCodes.OK).json(record);
+    }];
 }
 
 export function authDestroySession() {

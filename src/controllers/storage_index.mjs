@@ -1,7 +1,8 @@
+import {metaDir} from "../utils/paths.mjs";
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 
-const storageIndexPath = join(process.cwd(), ".data", "storage-index.json");
+const storageIndexPath = join(metaDir, "storage-index.json");
 
 function normalizeRecord(record) {
     const cid = `${record?.cid ?? ""}`.trim();

@@ -7,7 +7,7 @@ import mime from 'mime'
 import {createFileFromBuffer, createFileFromStream, getFileStream} from "./files.mjs";
 import {devLog} from "../utils/debug.mjs";
 import {deleteDataFromCid, listDatastoreEntries} from "./ipfs.mjs";
-import {authorize, getAuthConfigSummary} from "./auth.mjs";
+import {authorize, authorizeRead, authorizeWrite, getAuthConfigSummary} from "./auth.mjs";
 import {
     addDagIndexedFile,
     findDagIndexedFileByCid,
@@ -98,10 +98,7 @@ function resolveMimeType(recordType, filename) {
 
 export function multipartForm() {
     return [
-        authorize({
-            roles: ["admin", "uploader", "service"],
-            scopes: ["storage:write"]
-        }),
+        authorizeWrite(),
         (request, response) => {
             try {
                 devLog('START HANDLING MULTI PART');
@@ -214,10 +211,7 @@ export function multipartForm() {
 
 export function handleGetFile() {
     return [
-        authorize({
-            roles: ["admin", "reader", "uploader", "service"],
-            scopes: ["storage:read"]
-        }),
+        authorizeRead(),
         async (request, response) => {
             try {
                 const cid = request.params.cid;
@@ -239,10 +233,7 @@ export function handleGetFile() {
 
 export function handleGetFileByCid() {
     return [
-        authorize({
-            roles: ["admin", "reader", "uploader", "service"],
-            scopes: ["storage:read"]
-        }),
+        authorizeRead(),
         async (request, response) => {
             try {
                 const cid = `${request.params?.cid ?? ""}`;
@@ -663,6 +654,7 @@ export function adminDashboard() {
           <p class="muted">Upload and manage files with preview. Auth issuer: ${escapeHtml(authSummary.issuer)}.</p>
         </div>
         <div>
+          <a href="/admin/store" style="margin-right:10px">Store</a>
           <button id="logoutBtn" type="button">Sign out</button>
         </div>
       </div>
