@@ -1,3 +1,4 @@
+import {teamAdd, teamList, teamRemove} from "../../src/controllers/team.mjs";
 import {consolePage, landingPage, uiCss, uiJs, uiLandingJs, uiThemeJs} from "../../src/controllers/ui.mjs";
 import {storeLog, storeRebuildIndex, storeStats, storeVerify} from "../../src/controllers/store_admin.mjs";
 import {
@@ -14,6 +15,7 @@ import {
     authCreateSession,
     authDestroySession,
     authIssueToken,
+    authFirebaseConfig,
     authIssueWriteToken,
     authListTokens,
     authRevokeToken,
@@ -200,4 +202,28 @@ export const uiThemeJsREST = {
     path: `/storage/ui/theme.js`,
     method: 'GET',
     onRequest: uiThemeJs()
+}
+
+export const authFirebaseConfigREST = {
+    path: `/storage/auth/config`,
+    method: 'GET',
+    onRequest: authFirebaseConfig()
+}
+
+export const adminTeamListREST = {
+    path: `/storage/admin/team`,
+    method: 'GET',
+    onRequest: teamList()
+}
+
+export const adminTeamAddREST = {
+    path: `/storage/admin/team`,
+    method: 'POST',
+    onRequest: teamAdd()
+}
+
+export const adminTeamRemoveREST = {
+    path: `/storage/admin/team/:email`,
+    method: 'DELETE',
+    onRequest: teamRemove()
 }

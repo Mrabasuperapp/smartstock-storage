@@ -159,3 +159,7 @@ footer{padding:40px 0 64px;color:var(--muted)}
   *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;transition-delay:0s!important}
   html{scroll-behavior:auto}.mask>span,.fade,.row{transform:none!important;opacity:1!important}
 }
+
+.who{font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn.google{height:44px;width:100%;gap:10px}
+@media (max-width:860px){.who{display:none}}

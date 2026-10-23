@@ -11,7 +11,8 @@
 <body>
 <nav class="nav"><div class="wrap">
   <a class="brand" href="#top"><span class="mark"></span>Zebra</a>
-  <div class="links"><a href="#store">Store</a><a href="#files">Files</a><a href="#access">Access</a><a href="#integrity">Integrity</a></div>
+  <div class="links"><a href="#store">Store</a><a href="#files">Files</a><a href="#access">Access</a><a href="#team">Team</a><a href="#integrity">Integrity</a></div>
+  <span class="muted who" id="who" hidden></span>
   <button class="themebtn" type="button" data-theme-toggle></button>
   <button class="btn sm" id="out">Sign out</button>
 </div><i class="progress"></i></nav>
@@ -90,9 +91,22 @@
   <div class="list" id="toklist"></div>
 </div></section>
 
+<section class="sec" id="team"><div class="wrap">
+  <header data-reveal>
+    <span class="eyebrow fade">04 — Team</span>
+    <h2><span class="mask" style="--i:0"><span>Who can</span></span><span class="mask" style="--i:1"><span>sign in.</span></span></h2>
+    <p class="lede fade" style="--i:3">Anyone you add here signs in with their Google account and gets full admin access. Owners are set on the server and cannot be removed here.</p>
+  </header>
+  <form class="card form fade" id="teamform" style="--i:2;max-width:520px">
+    <label>Google email<input class="field" id="temail" type="email" placeholder="name@gmail.com" required autocomplete="off"/></label>
+    <button class="btn primary" type="submit">Add admin</button>
+  </form>
+  <div class="list" id="teamlist" style="margin-top:24px"></div>
+</div></section>
+
 <section class="sec" id="integrity"><div class="wrap">
   <header data-reveal>
-    <span class="eyebrow fade">04 — Integrity</span>
+    <span class="eyebrow fade">05 — Integrity</span>
     <h2><span class="mask" style="--i:0"><span>Trust, then</span></span><span class="mask" style="--i:1"><span>verify.</span></span></h2>
   </header>
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;min-height:38px">

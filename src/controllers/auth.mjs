@@ -5,6 +5,8 @@ import {StatusCodes} from "http-status-codes";
 import {metaDir} from "../utils/paths.mjs";
 import {loginPageHtml} from "./ui.mjs";
 import {checkApiToken, listApiTokens, registerApiToken, revokeApiToken} from "./tokens.mjs";
+import {isAdminEmail} from "./admins.mjs";
+import {firebaseWebConfig, verifyGoogleIdToken} from "./google_auth.mjs";
 
 const issuer = process.env.AUTH_ISSUER || "smartstock-storage";
 const audience = process.env.AUTH_AUDIENCE || "smartstock-storage-api";
@@ -171,7 +173,7 @@ function authenticateUser(username, password) {
     return found;
 }
 
-async function parseJsonBody(request) {
+export async function parseJsonBody(request) {
     if (request.body && typeof request.body === "object") {
         return request.body;
     }
@@ -206,7 +208,8 @@ function buildJwt(payload) {
         aud: payload?.aud || audience,
         iat: now,
         nbf: now,
-        ...(payload?.jti ? {typ: "api", jti: payload.jti} : {exp: now + tokenTtlSec}),
+        ...(payload?.jti ? {typ: "api", jti: payload.jti} : {exp: now + (payload?.ttlSec ?? tokenTtlSec)}),
+        ...(payload?.via ? {via: payload.via, name: payload.name, picture: payload.picture} : {}),
         sub: payload.sub,
         roles: payload.roles || [],
         scopes: payload.scopes || []
@@ -307,9 +310,15 @@ export function authorize({roles = [], scopes = [], audience: expectedAudience} 
                 unauthorizedResponse(request, response, "Token revoked");
                 return;
             }
+            if (claims?.via === "google" && !await isAdminEmail(claims.sub)) {
+                unauthorizedResponse(request, response, "Your access was removed");
+                return;
+            }
 
             request.auth = {
                 sub: `${claims.sub}`,
+                name: claims.name,
+                picture: claims.picture,
                 roles: claimRoles,
                 scopes: claimScopes,
                 token
@@ -345,6 +354,9 @@ async function tokenIsValid(request) {
         const claims = verifyJwt(token);
         if (claims?.typ === "api" && !await checkApiToken(`${claims.jti}`)) {
             return {ok: false, reason: "token-revoked"};
+        }
+        if (claims?.via === "google" && !await isAdminEmail(claims.sub)) {
+            return {ok: false, reason: "access-removed"};
         }
         return {ok: true};
     } catch (e) {
@@ -391,8 +403,10 @@ export const authorizeRead = () => authorizeUnlessOptional({
     isRequired: () => !accessPolicy().publicRead
 });
 
-function makeSessionCookie(token) {
-    const maxAge = Math.max(60, tokenTtlSec);
+const googleSessionTtlSec = Number(process.env.AUTH_SESSION_TTL_SEC || 12 * 60 * 60);
+
+function makeSessionCookie(token, ttlSec = tokenTtlSec) {
+    const maxAge = Math.max(60, ttlSec);
     const secure = `${process.env.AUTH_COOKIE_SECURE || "auto"}`.toLowerCase();
     const shouldSecure = secure === "true" || (secure === "auto" && `${process.env.NODE_ENV || ""}` === "production");
     const parts = [
@@ -455,32 +469,55 @@ export function authIssueToken() {
     ];
 }
 
-export function authCreateSession() {
+const ADMIN_SCOPES = ["storage:read", "storage:write", "admin:dashboard", "admin:files", "admin:datastore"];
+
+/** Public Firebase web config the browser needs to start Google sign-in (these values are not secrets). */
+export function authFirebaseConfig() {
+    return [
+        (_, response) => {
+            response.set({"Cache-Control": "no-store"});
+            response.status(StatusCodes.OK).json({firebase: firebaseWebConfig()});
+        }
+    ];
+}
+
+/**
+ * Console sign-in: exchanges a verified Google (Firebase) ID token for a session cookie.
+ * Only the owners in ADMIN_EMAILS and the admins added in the console may sign in.
+ */
+export function authCreateSession({verifyIdToken = verifyGoogleIdToken} = {}) {
     return [
         async (request, response) => {
             try {
                 await ensureKeyPairLoaded();
                 const body = await parseJsonBody(request);
-                const username = `${body?.username || ""}`.trim();
-                const password = `${body?.password || ""}`;
-                const user = authenticateUser(username, password);
-                if (!user) {
-                    const hasUsers = parseUserConfig().length > 0;
-                    response.status(StatusCodes.UNAUTHORIZED).json({
-                        message: hasUsers ? "Invalid credentials" : "No AUTH_USERS_JSON users configured"
+                const user = await verifyIdToken(body?.idToken);
+                if (!await isAdminEmail(user.email)) {
+                    console.warn(`[zebra:login-denied] ${user.email}`);
+                    response.status(StatusCodes.FORBIDDEN).json({
+                        message: `${user.email} does not have access. Ask an admin to add this Google account.`
                     });
                     return;
                 }
-                const token = buildJwt({sub: user.username, roles: user.roles, scopes: user.scopes});
-                response.set({"Set-Cookie": makeSessionCookie(token)});
+                const token = buildJwt({
+                    sub: user.email,
+                    roles: ["admin"],
+                    scopes: ADMIN_SCOPES,
+                    ttlSec: googleSessionTtlSec,
+                    via: "google",
+                    name: user.name,
+                    picture: user.picture
+                });
+                response.set({"Set-Cookie": makeSessionCookie(token, googleSessionTtlSec)});
                 response.status(StatusCodes.OK).json({
                     ok: true,
-                    subject: user.username,
-                    roles: user.roles,
-                    scopes: user.scopes
+                    email: user.email,
+                    name: user.name,
+                    picture: user.picture,
+                    roles: ["admin"]
                 });
             } catch (e) {
-                response.status(StatusCodes.BAD_REQUEST).json({message: e?.toString()});
+                response.status(e?.status ?? StatusCodes.BAD_REQUEST).json({message: `${e?.message ?? e}`});
             }
         }
     ];
@@ -540,6 +577,8 @@ export function authWhoAmI() {
         (request, response) => {
             response.status(StatusCodes.OK).json({
                 subject: request.auth?.sub,
+                name: request.auth?.name,
+                picture: request.auth?.picture,
                 roles: request.auth?.roles || [],
                 scopes: request.auth?.scopes || []
             });
