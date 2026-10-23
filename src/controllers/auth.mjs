@@ -133,7 +133,9 @@ function safeEqual(a, b) {
 function verifyPassword(user, password) {
     if (user?.passwordHash) {
         const candidate = hashPlainPassword(password);
-        return safeEqual(candidate, user.passwordHash);
+        // hash tools differ in case and some print a trailing " -", so compare only the 64 hex characters
+        const stored = `${user.passwordHash}`.trim().split(/\s+/)[0].toLowerCase();
+        return safeEqual(candidate, stored);
     }
     if (user?.password) {
         return safeEqual(user.password, `${password}`);
