@@ -25,6 +25,7 @@ function serve(name, contentType, cacheControl) {
 
 const assetCache = isProd ? "public, max-age=3600" : "no-store";
 export const uiCss = () => [serve("console.css", "text/css", assetCache)];
+export const uiThemeJs = () => [serve("theme.js", "text/javascript", assetCache)];
 export const uiJs = () => [serve("console.js", "text/javascript", assetCache)];
 export const uiLandingJs = () => [serve("landing.js", "text/javascript", assetCache)];
 export const landingPage = () => [serve("landing.html", "text/html", "no-store")];

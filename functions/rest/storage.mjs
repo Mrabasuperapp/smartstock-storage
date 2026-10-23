@@ -1,4 +1,4 @@
-import {consolePage, landingPage, uiCss, uiJs, uiLandingJs} from "../../src/controllers/ui.mjs";
+import {consolePage, landingPage, uiCss, uiJs, uiLandingJs, uiThemeJs} from "../../src/controllers/ui.mjs";
 import {storeLog, storeRebuildIndex, storeStats, storeVerify} from "../../src/controllers/store_admin.mjs";
 import {
     adminDashboard,
@@ -209,4 +209,10 @@ export const adminRevokeTokenREST = {
     path: `/admin/tokens/:id`,
     method: 'DELETE',
     onRequest: authRevokeToken()
+}
+
+export const uiThemeJsREST = {
+    path: `/ui/theme.js`,
+    method: 'GET',
+    onRequest: uiThemeJs()
 }

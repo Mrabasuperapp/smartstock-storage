@@ -6,7 +6,15 @@
   --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   --sans:"Inter","Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme:dark){:root{--bg:#000;--panel:#0c0c0c;--ink:#ededed;--muted:#8f8f8f;--line:#262626;--soft:#141414;--accent:#3291ff;--stripe:rgba(255,255,255,.9)}}
+/* theme: follows the system unless data-theme is set to light or dark (see theme.js) */
+:root{color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--panel:#0c0c0c;--ink:#ededed;--muted:#8f8f8f;--line:#262626;--soft:#141414;--accent:#3291ff;--stripe:rgba(255,255,255,.9)}}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#000;--panel:#0c0c0c;--ink:#ededed;--muted:#8f8f8f;--line:#262626;--soft:#141414;--accent:#3291ff;--stripe:rgba(255,255,255,.9)}
+.themebtn{flex:none;width:34px;height:34px;padding:0;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer;color:var(--ink);transition:border-color .2s,transform .25s var(--ease)}
+.themebtn:hover{border-color:var(--ink)}.themebtn:active{transform:scale(.94)}
+.themebtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.login .themebtn{position:fixed;top:16px;right:16px;z-index:5}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{scrollbar-gutter:stable;scroll-behavior:smooth;scroll-padding-top:calc(var(--nav) + 12px)}
@@ -20,7 +28,8 @@ button,input,select{font:inherit;color:inherit}
 
 /* nav + page progress (fixed height, never shifts layout) */
 .nav{position:sticky;top:0;z-index:20;height:var(--nav);display:flex;align-items:center;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line)}
-.nav .wrap{display:flex;align-items:center;gap:28px;width:100%}
+.nav .wrap{display:flex;align-items:center;gap:12px;width:100%}
+.nav .brand{margin-right:16px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.01em}
 .mark{width:22px;height:22px;border-radius:6px;background:repeating-linear-gradient(135deg,var(--ink) 0 3px,transparent 3px 6px);border:1.5px solid var(--ink)}
 .links{display:flex;gap:4px;flex:1}
