@@ -156,6 +156,28 @@
     $("#toklist").replaceChildren(...(rows.length ? rows : [el("div", "No tokens yet", "empty")]));
   }
 
+  /* ---------- team: who may sign in with Google ---------- */
+  async function loadTeam() {
+    const admins = await api("/storage/admin/team");
+    const rows = admins.map(a => {
+      const row = el("div", null, "row in"); row.style.gridTemplateColumns = "minmax(0,2fr) 120px 150px auto";
+      const name = el("div", null, "name"); name.append(el("span", a.email));
+      const acts = el("div", null, "acts");
+      if (!a.owner) { const rm = el("button", "Remove", "btn sm danger"); rm.onclick = async () => { if (!confirm("Remove " + a.email + "? Their sessions end immediately.")) return; try { await api("/storage/admin/team/" + encodeURIComponent(a.email), { method: "DELETE" }); toast("Removed"); loadTeam(); } catch (e) { toast(e.message); } }; acts.append(rm); }
+      row.append(name, el("span", a.owner ? "owner" : "admin", "size muted"), el("span", a.owner ? "set on server" : "added " + (a.addedAt ? new Date(a.addedAt).toLocaleDateString() : ""), "when muted"), acts);
+      return row;
+    });
+    $("#teamlist").replaceChildren(...(rows.length ? rows : [el("div", "No admins yet", "empty")]));
+  }
+  $("#teamform").onsubmit = async e => {
+    e.preventDefault();
+    try { await api("/storage/admin/team", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("#temail").value }) }); $("#temail").value = ""; toast("Added"); loadTeam(); }
+    catch (err) { toast(err.message); }
+  };
+  async function showWho() {
+    try { const me = await api("/storage/auth/me"); const w = $("#who"); w.textContent = me.name || me.subject; w.title = me.subject; w.hidden = false; } catch { }
+  }
+
   /* ---------- integrity ---------- */
   const vmsg = $("#vmsg");
   $("#verify").onclick = async e => {
@@ -177,5 +199,5 @@
   const links = $$(".links a"); const nio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });
   $$("section[id]").forEach(s => nio.observe(s));
 
-  loadTokens().catch(() => {}); loadStore().catch(e => toast(e.message)); loadFiles().catch(e => toast(e.message));
+  loadTokens().catch(() => {}); loadTeam().catch(() => {}); showWho(); loadStore().catch(e => toast(e.message)); loadFiles().catch(e => toast(e.message));
 })();
