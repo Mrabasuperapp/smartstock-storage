@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en" class="no-js"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="color-scheme" content="light dark"/><title>Zebra Sign in</title>
-<link rel="stylesheet" href="/ui/console.css"/>
+<link rel="stylesheet" href="/storage/ui/console.css"/>
 <script>document.documentElement.classList.replace("no-js","js")</script>
-<script src="/ui/theme.js"></script></head>
+<script src="/storage/ui/theme.js"></script></head>
 <body class="in"><button class="themebtn" type="button" data-theme-toggle></button><main class="login">
   <section class="art" id="art"><div class="stripes"></div>
     <h1><span class="mask" style="--i:0"><span>Storage that</span></span><span class="mask" style="--i:1"><span>knows what</span></span><span class="mask" style="--i:2"><span>it holds.</span></span></h1>
@@ -23,7 +23,7 @@ const f=document.getElementById("f"),err=document.getElementById("err"),art=docu
 requestAnimationFrame(()=>document.body.classList.add("in"));
 art.addEventListener("pointermove",e=>{const r=art.getBoundingClientRect();art.style.setProperty("--mx",(e.clientX-r.left)/r.width*100+"%");art.style.setProperty("--my",(e.clientY-r.top)/r.height*100+"%")},{passive:true});
 f.addEventListener("submit",async e=>{e.preventDefault();err.textContent="";
-  const res=await fetch("/auth/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:f.username.value,password:f.password.value})});
+  const res=await fetch("/storage/auth/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:f.username.value,password:f.password.value})});
   if(!res.ok){err.textContent=(await res.json().catch(()=>({}))).message||"Sign in failed";return}
-  location.href="/admin/storage"});
+  location.href="/storage/admin"});
 </script></body></html>

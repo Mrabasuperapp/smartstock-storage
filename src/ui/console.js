@@ -8,7 +8,7 @@
   const copy = async (text) => { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch { toast("Copy failed"); } };
   async function api(url, opt) {
     const r = await fetch(url, { credentials: "same-origin", ...opt });
-    if (r.status === 401) { location.href = "/auth/login"; throw new Error("Signed out"); }
+    if (r.status === 401) { location.href = "/storage/auth/login"; throw new Error("Signed out"); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.message || r.statusText);
     return j;
@@ -66,7 +66,7 @@
   const kind = t => { const k = `${t || ""}`.split("/")[0]; return COLORS[k] ? k : "other"; };
 
   async function loadStore() {
-    const [stats, log, all] = await Promise.all([api("/admin/store/stats"), api("/admin/store/log?limit=6"), api("/admin/storage/files?pageSize=100")]);
+    const [stats, log, all] = await Promise.all([api("/storage/admin/store/stats"), api("/storage/admin/store/log?limit=6"), api("/storage/admin/files?pageSize=100")]);
     data.stats = stats;
     $("#k-bytes").textContent = fmtBytes(stats.blockBytes);
     $("#k-files").textContent = stats.indexedFiles;
@@ -89,7 +89,7 @@
   async function loadFiles(append) {
     if (!append) { data.page = 1; skeleton(); }
     const q = new URLSearchParams({ page: data.page, pageSize: 12, q: $("#q").value.trim(), type: $("#type").value });
-    const r = await api("/admin/storage/files?" + q);
+    const r = await api("/storage/admin/files?" + q);
     data.total = r.pagination.total;
     const rows = r.files.map((f, i) => {
       const row = el("div", null, "row"); row.style.setProperty("--i", i % 12);
@@ -97,7 +97,7 @@
       const acts = el("div", null, "acts");
       const open = el("a", "Open", "btn sm"); open.href = f.url; open.target = "_blank"; open.rel = "noopener";
       const cp = el("button", "Copy link", "btn sm"); cp.onclick = () => copy(location.origin + f.url);
-      const del = el("button", "Delete", "btn sm danger"); del.onclick = async () => { if (!confirm("Delete " + f.name + "?")) return; try { await api("/admin/storage/files/" + encodeURIComponent(f.cid), { method: "DELETE" }); toast("Deleted"); loadFiles(); loadStore(); } catch (e) { toast(e.message); } };
+      const del = el("button", "Delete", "btn sm danger"); del.onclick = async () => { if (!confirm("Delete " + f.name + "?")) return; try { await api("/storage/admin/files/" + encodeURIComponent(f.cid), { method: "DELETE" }); toast("Deleted"); loadFiles(); loadStore(); } catch (e) { toast(e.message); } };
       acts.append(open, cp, del);
       row.append(name, el("span", fmtBytes(f.size), "size num muted"), el("span", new Date(f.createdAt).toLocaleDateString(), "when muted"), acts);
       return row;
@@ -133,7 +133,7 @@
     e.preventDefault();
     const out = $("#tokout");
     try {
-      const t = await api("/admin/tokens", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ label: $("#tlabel").value, access}) });
+      const t = await api("/storage/admin/tokens", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ label: $("#tlabel").value, access}) });
       const curl = `curl -X POST ${location.origin}/storage \\\n  -H "Authorization: Bearer <token>" \\\n  -F "multipleFiles=@file.png"`;
       const tok = el("code", t.accessToken, "code"), ex = el("code", curl, "code");
       const row = el("div"); row.style.cssText = "display:flex;gap:8px;align-items:center;justify-content:space-between";
@@ -144,12 +144,12 @@
   };
 
   async function loadTokens() {
-    const all = await api("/admin/tokens");
+    const all = await api("/storage/admin/tokens");
     const rows = all.map(t => {
       const row = el("div", null, "row in"); row.style.gridTemplateColumns = "minmax(0,2fr) 120px 150px auto";
       const name = el("div", null, "name"); name.append(el("span", t.label)); name.append(el("span", t.revokedAt ? "revoked" : "active", "mono " + (t.revokedAt ? "err" : "muted")));
       const acts = el("div", null, "acts");
-      if (!t.revokedAt) { const rv = el("button", "Revoke", "btn sm danger"); rv.onclick = async () => { if (!confirm("Revoke " + t.label + "? Services using it lose access immediately.")) return; try { await api("/admin/tokens/" + t.id, { method: "DELETE" }); toast("Revoked"); loadTokens(); } catch (e) { toast(e.message); } }; acts.append(rv); }
+      if (!t.revokedAt) { const rv = el("button", "Revoke", "btn sm danger"); rv.onclick = async () => { if (!confirm("Revoke " + t.label + "? Services using it lose access immediately.")) return; try { await api("/storage/admin/tokens/" + t.id, { method: "DELETE" }); toast("Revoked"); loadTokens(); } catch (e) { toast(e.message); } }; acts.append(rv); }
       row.append(name, el("span", t.scopes.map(s => s.split(":")[1]).join("+"), "size muted"), el("span", t.lastUsedAt ? "used " + new Date(t.lastUsedAt).toLocaleDateString() : "never used", "when muted"), acts);
       return row;
     });
@@ -161,7 +161,7 @@
   $("#verify").onclick = async e => {
     const b = e.currentTarget; b.disabled = true; vmsg.textContent = "Checking…";
     try {
-      const r = await api("/admin/store/verify", { method: "POST" });
+      const r = await api("/storage/admin/store/verify", { method: "POST" });
       vmsg.textContent = `${r.ok} ok · ${r.problems.length} problem${r.problems.length === 1 ? "" : "s"} · ${r.checked} checked`;
       $("#issues").replaceChildren(...r.problems.map(p => { const d = el("div", null, "issue"); const body = el("div"); body.append(el("div", p.name), el("div", p.cid, "mono muted")); d.append(el("span", p.status, "tag"), body); return d; }));
     } catch (err) { vmsg.textContent = err.message; }
@@ -169,9 +169,9 @@
   };
   $("#rebuild").onclick = async () => {
     if (!confirm("Scan every block to find the newest index entry?")) return;
-    try { const r = await api("/admin/store/rebuild", { method: "POST" }); vmsg.textContent = r.rebuilt ? `Rebuilt · ${r.count} files` : "No index entries found"; loadStore(); loadFiles(); } catch (err) { vmsg.textContent = err.message; }
+    try { const r = await api("/storage/admin/store/rebuild", { method: "POST" }); vmsg.textContent = r.rebuilt ? `Rebuilt · ${r.count} files` : "No index entries found"; loadStore(); loadFiles(); } catch (err) { vmsg.textContent = err.message; }
   };
-  $("#out").onclick = async () => { await fetch("/auth/session", { method: "DELETE" }); location.href = "/auth/login"; };
+  $("#out").onclick = async () => { await fetch("/storage/auth/session", { method: "DELETE" }); location.href = "/storage/auth/login"; };
 
   /* nav highlight */
   const links = $$(".links a"); const nio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });

@@ -209,8 +209,16 @@ export function multipartForm() {
     ]
 }
 
+// file routes share the /storage/:a/:b shape with the UI and API routes, so only real CIDs are handled here
+const CID_PATTERN = /^[A-Za-z0-9]{40,}$/;
+
+function cidGuard(request, _, next) {
+    next(CID_PATTERN.test(`${request.params?.cid ?? ""}`) ? undefined : "route");
+}
+
 export function handleGetFile() {
     return [
+        cidGuard,
         authorizeRead(),
         async (request, response) => {
             try {
@@ -233,6 +241,7 @@ export function handleGetFile() {
 
 export function handleGetFileByCid() {
     return [
+        cidGuard,
         authorizeRead(),
         async (request, response) => {
             try {
@@ -654,7 +663,7 @@ export function adminDashboard() {
           <p class="muted">Upload and manage files with preview. Auth issuer: ${escapeHtml(authSummary.issuer)}.</p>
         </div>
         <div>
-          <a href="/admin/store" style="margin-right:10px">Store</a>
+          <a href="/storage/admin/store" style="margin-right:10px">Store</a>
           <button id="logoutBtn" type="button">Sign out</button>
         </div>
       </div>
@@ -791,7 +800,7 @@ export function adminDashboard() {
         ...(options || {})
       });
       if (res.status === 401) {
-        window.location.href = "/auth/login";
+        window.location.href = "/storage/auth/login";
         throw new Error("Session expired. Please sign in again.");
       }
       return res;
@@ -824,7 +833,7 @@ export function adminDashboard() {
         params.set("pageSize", String(state.pagination.pageSize));
         if (state.q) params.set("q", state.q);
         if (state.type && state.type !== "all") params.set("type", state.type);
-        const res = await apiFetch("/admin/storage/files?" + params.toString());
+        const res = await apiFetch("/storage/admin/files?" + params.toString());
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || "Failed loading files");
         state.files = Array.isArray(data.files) ? data.files : [];
@@ -946,7 +955,7 @@ export function adminDashboard() {
     }
 
     async function deleteFile(cid) {
-      const res = await apiFetch("/admin/storage/files/" + encodeURIComponent(cid), {method: "DELETE"});
+      const res = await apiFetch("/storage/admin/files/" + encodeURIComponent(cid), {method: "DELETE"});
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Delete failed");
       const helia = json?.helia?.deleted ? "helia deleted" : ("helia " + (json?.helia?.reason || "not-deleted"));
@@ -1240,8 +1249,8 @@ export function adminDashboard() {
     updatePreviewVisibility();
     updateDeleteDialogState();
     logoutBtn?.addEventListener("click", async () => {
-      await fetch("/auth/session", {method: "DELETE"});
-      window.location.href = "/auth/login";
+      await fetch("/storage/auth/session", {method: "DELETE"});
+      window.location.href = "/storage/auth/login";
     });
     loadFiles();
   </script>

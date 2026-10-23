@@ -2,15 +2,15 @@
 <html lang="en" class="no-js"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="color-scheme" content="light dark"/><title>Zebra Storage</title>
 <meta name="description" content="Content-addressed file storage with a self-describing index."/>
-<link rel="stylesheet" href="/ui/console.css"/>
+<link rel="stylesheet" href="/storage/ui/console.css"/>
 <script>document.documentElement.classList.replace("no-js","js")</script>
-<script src="/ui/theme.js"></script></head>
+<script src="/storage/ui/theme.js"></script></head>
 <body>
 <nav class="nav"><div class="wrap">
   <a class="brand" href="#top"><span class="mark"></span>Zebra</a>
   <div class="links"><a href="#how">How it works</a><a href="#api">API</a><a href="#why">Why</a></div>
   <button class="themebtn" type="button" data-theme-toggle></button>
-  <a class="btn sm primary" href="/auth/login">Sign in</a>
+  <a class="btn sm primary" href="/storage/auth/login">Sign in</a>
 </div><i class="progress"></i></nav>
 
 <header class="hero" id="top" data-scrub><div class="stripes"></div>
@@ -22,7 +22,7 @@
       <span class="mask" style="--i:2"><span>forever.</span></span>
     </h1>
     <p class="lede fade" style="--i:4">Zebra keeps every file as content-addressed blocks and writes its own index into the same store. Copy the folder to a new server and everything, names included, comes with it.</p>
-    <div class="chips fade" style="--i:5"><a class="btn primary" href="/auth/login">Open console</a><a class="btn" href="#api">Read the API</a></div>
+    <div class="chips fade" style="--i:5"><a class="btn primary" href="/storage/auth/login">Open console</a><a class="btn" href="#api">Read the API</a></div>
   </div>
   <i class="scrollcue"></i>
 </header>
@@ -94,6 +94,6 @@ multipleFiles=@invoice.pdf</code></div>
   </div>
 </div></section>
 
-<footer><div class="wrap" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap"><span>Zebra Storage</span><a href="/auth/login">Sign in →</a></div></footer>
-<script src="/ui/landing.js" defer></script>
+<footer><div class="wrap" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap"><span>Zebra Storage</span><a href="/storage/auth/login">Sign in →</a></div></footer>
+<script src="/storage/ui/landing.js" defer></script>
 </body></html>

@@ -266,9 +266,9 @@ function verifyJwt(token, expectedAudience) {
 function unauthorizedResponse(request, response, message = "Unauthorized") {
     const acceptsHtml = `${request.get("accept") || ""}`.toLowerCase().includes("text/html");
     if (acceptsHtml) {
-        response.redirect?.("/auth/login");
+        response.redirect?.("/storage/auth/login");
         if (!response.headersSent) {
-            response.status(StatusCodes.FOUND).set({Location: "/auth/login"}).end();
+            response.status(StatusCodes.FOUND).set({Location: "/storage/auth/login"}).end();
         }
         return;
     }
