@@ -4,8 +4,9 @@ import {createReadStream} from "node:fs";
 import {pipeline} from "node:stream/promises";
 import formidable from 'formidable';
 import mime from 'mime'
-import {createFileFromBuffer, createFileFromStream, getFileStream} from "./files.mjs";
+import {createFileFromBuffer, createFileFromStream, getFileSize, getFileStream} from "./files.mjs";
 import {devLog} from "../utils/debug.mjs";
+import {maxUploadMb} from "../utils/paths.mjs";
 import {deleteDataFromCid, listDatastoreEntries} from "./ipfs.mjs";
 import {authorize, authorizeRead, authorizeWrite, getAuthConfigSummary} from "./auth.mjs";
 import {
@@ -87,6 +88,52 @@ async function streamToHttpResponse(request, response, sourceStream, headers) {
     }
 }
 
+/**
+ * Parses a single `bytes=` range against a file of `size` bytes.
+ * @return {{start: number, end: number} | null | "unsatisfiable"} null when the header is absent or not a single byte range
+ */
+function parseRange(header, size) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(`${header ?? ""}`.trim());
+    if (!m || (m[1] === "" && m[2] === "")) {
+        return null;
+    }
+    let start, end;
+    if (m[1] === "") {
+        const suffix = Number(m[2]);
+        if (suffix === 0) {
+            return "unsatisfiable";
+        }
+        start = Math.max(0, size - suffix);
+        end = size - 1;
+    } else {
+        start = Number(m[1]);
+        end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
+    }
+    return start >= size || start > end ? "unsatisfiable" : {start, end};
+}
+
+async function sendFile(request, response, cid, headers) {
+    const size = await getFileSize({cid});
+    const range = parseRange(request.headers.range, size);
+    const base = {...headers, 'Accept-Ranges': 'bytes'};
+    if (range === "unsatisfiable") {
+        response.status(StatusCodes.REQUESTED_RANGE_NOT_SATISFIABLE).set({...base, 'Content-Range': `bytes */${size}`}).end();
+        return;
+    }
+    if (range) {
+        const stream = await getFileStream({cid, start: range.start, end: range.end});
+        response.status(StatusCodes.PARTIAL_CONTENT);
+        await streamToHttpResponse(request, response, stream, {
+            ...base,
+            'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
+            'Content-Length': range.end - range.start + 1
+        });
+        return;
+    }
+    const stream = await getFileStream({cid});
+    await streamToHttpResponse(request, response, stream, {...base, 'Content-Length': size});
+}
+
 function resolveMimeType(recordType, filename) {
     const fromName = mime.getType(`${filename || ""}`) || "";
     const cleanRecord = `${recordType || ""}`.toLowerCase();
@@ -102,7 +149,7 @@ export function multipartForm() {
         (request, response) => {
             try {
                 devLog('START HANDLING MULTI PART');
-                const max = 50
+                const max = maxUploadMb
                 const form = formidable({
                     multiples: true,
                     maxFileSize: max * 1024 * 1024,
@@ -226,9 +273,8 @@ export function handleGetFile() {
                 const filename = request.params.filename;
                 devLog('CID::', cid)
                 const indexed = await findDagIndexedFileByCid(cid);
-                const f = await getFileStream({cid});
                 const detectedType = resolveMimeType(indexed?.type, filename);
-                await streamToHttpResponse(request, response, f, {
+                await sendFile(request, response, cid, {
                     'Content-Type': detectedType,
                     'Content-Disposition': `inline; filename="${sanitizeFilenameForHeader(filename)}"`
                 });
@@ -249,8 +295,7 @@ export function handleGetFileByCid() {
                 const indexed = await findDagIndexedFileByCid(cid);
                 const filename = indexed?.name || cid;
                 const detectedType = resolveMimeType(indexed?.type, filename);
-                const stream = await getFileStream({cid});
-                await streamToHttpResponse(request, response, stream, {
+                await sendFile(request, response, cid, {
                     'Content-Type': detectedType,
                     'Content-Disposition': `inline; filename="${sanitizeFilenameForHeader(filename)}"`
                 });

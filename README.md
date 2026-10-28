@@ -39,6 +39,7 @@ Set these as environment variables on the service (or in `.env` for local runs).
 | `AUTH_COOKIE_SECURE` | recommended | `auto` | `true` when served over HTTPS. |
 | `STORAGE_REQUIRE_WRITE_TOKEN` | no | `false` | `true` rejects uploads without a valid token. |
 | `STORAGE_PUBLIC_READ` | no | `true` | `false` requires a token to read files. |
+| `STORAGE_MAX_UPLOAD_MB` | no | `50` | Largest single upload, in MB. |
 | `STORAGE_NAMESPACE` | no | `smartstock-storage` | Namespace of the index log. |
 | `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_KEY_ID`, `AUTH_TOKEN_TTL_SEC` | no | see `.env.example` | Session token settings. |
 

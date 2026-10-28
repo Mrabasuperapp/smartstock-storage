@@ -33,7 +33,7 @@ export async function generateCidFromBuffer(x) {
 /**
  *
  * @param cid {*}
- * @param ipfsOptions{{stream:boolean,start?:number,end?: number}}
+ * @param ipfsOptions{{stream:boolean,start?:number,end?: number}} start and end are inclusive byte offsets
  * @return {Promise<*>}
  */
 export async function generateDataFromCid(
@@ -42,8 +42,8 @@ export async function generateDataFromCid(
 ) {
     devLog('____start fetch cid content with ipfs_______');
     const results = await unixFS.cat(cid, {
-        offset: (ipfsOptions && ipfsOptions.start) ? ipfsOptions.start : undefined,
-        length: (ipfsOptions && ipfsOptions.end) ? ipfsOptions.end : undefined,
+        offset: ipfsOptions?.start,
+        length: Number.isFinite(ipfsOptions?.end) ? ipfsOptions.end - (ipfsOptions.start ?? 0) + 1 : undefined,
         timeout: 1000 * 60 * 5,
     });
     devLog('____cid content found with ipfs______');
@@ -58,6 +58,15 @@ export async function generateDataFromCid(
         }
         return Buffer.concat(chunks, total);
     }
+}
+
+/**
+ * @param cid {*}
+ * @return {Promise<number>} size in bytes of the file content
+ */
+export async function getFileSizeFromCid(cid) {
+    const stat = await unixFS.stat(typeof cid === "string" ? CID.parse(cid) : cid);
+    return Number(stat.size);
 }
 
 /**

@@ -1,4 +1,4 @@
-import {generateCidFromBuffer, generateCidFromDataStream, generateDataFromCid} from "./ipfs.mjs";
+import {generateCidFromBuffer, generateCidFromDataStream, generateDataFromCid, getFileSizeFromCid} from "./ipfs.mjs";
 import {devLog} from "../utils/debug.mjs";
 
 /**
@@ -71,15 +71,26 @@ export async function getFileBuffer({cid}) {
 
 /**
  *
- * @param file {{cid: string}}
+ * @param file {{cid: string, start?: number, end?: number}} start and end are inclusive byte offsets
  * @return {Promise<ReadableStream>}
  */
-export async function getFileStream({cid}) {
+export async function getFileStream({cid, start, end}) {
     if (cid) {
         return await generateDataFromCid(
-            cid, {stream: true}
+            cid, {stream: true, start, end}
         );
     } else {
         throw new Error("file not found, maybe it is deleted");
     }
+}
+
+/**
+ * @param file {{cid: string}}
+ * @return {Promise<number>}
+ */
+export async function getFileSize({cid}) {
+    if (!cid) {
+        throw new Error("file not found, maybe it is deleted");
+    }
+    return await getFileSizeFromCid(cid);
 }

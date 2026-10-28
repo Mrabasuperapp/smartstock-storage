@@ -5,7 +5,7 @@ import {CID} from "multiformats/cid";
 import {accessPolicy, authorize, getUntokenedWriteStats} from "./auth.mjs";
 import {blockstore, unixFS} from "./ipfs_helia.mjs";
 import {getDagRootInfo, listDagIndexedFiles, listDagLog, rebuildDagIndexFromStore} from "./dag_index.mjs";
-import {blockstoreDir, metaDir} from "../utils/paths.mjs";
+import {blockstoreDir, maxUploadMb, metaDir} from "../utils/paths.mjs";
 
 const guard = () => authorize({roles: ["admin"], scopes: ["admin:datastore"]});
 
@@ -32,6 +32,7 @@ async function readStats() {
     return {
         blockstoreDir,
         metaDir,
+        maxUploadMb,
         namespace: dag.namespace,
         headCid: dag.rootCid,
         updatedAt: dag.updatedAt,

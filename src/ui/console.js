@@ -68,6 +68,7 @@
   async function loadStore() {
     const [stats, log, all] = await Promise.all([api("/storage/admin/store/stats"), api("/storage/admin/store/log?limit=6"), api("/storage/admin/files?pageSize=100")]);
     data.stats = stats;
+    $("#dropmsg").textContent = dropHint();
     $("#k-bytes").textContent = fmtBytes(stats.blockBytes);
     $("#k-files").textContent = stats.indexedFiles;
     $("#k-free").textContent = fmtBytes(stats.diskFreeBytes);
@@ -112,13 +113,14 @@
   let qt; $("#q").oninput = () => { clearTimeout(qt); qt = setTimeout(() => loadFiles(), 250); };
   $("#type").onchange = () => loadFiles();
 
+  const dropHint = () => "Up to " + (data.stats?.maxUploadMb || 50) + " MB each";
   async function upload(files) {
     if (!files.length) return;
     const fd = new FormData(); [...files].forEach(f => fd.append("multipleFiles", f));
     $("#dropmsg").textContent = "Uploading " + files.length + "…";
     try { await api("/storage", { method: "POST", body: fd }); toast("Uploaded"); await Promise.all([loadFiles(), loadStore()]); }
     catch (e) { toast(e.message); }
-    $("#dropmsg").textContent = "Up to 50 MB each";
+    $("#dropmsg").textContent = dropHint();
   }
   const drop = $("#drop");
   $("#pick").onchange = e => { upload(e.target.files); e.target.value = ""; };
